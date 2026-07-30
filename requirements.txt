@@ -1,0 +1,12 @@
+flask
+python-dotenv
+langchain-core
+langchain-community
+langchain-google-genai
+langchain-huggingface
+langchain-unstructured
+langchain-text-splitters
+unstructured[pdf]
+chromadb
+sentence-transformers
+python-docx
