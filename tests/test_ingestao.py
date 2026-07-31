@@ -19,7 +19,7 @@ class TestIngestao(unittest.TestCase):
             csv_path = Path(tmpdir) / "custos.csv"
 
             txt_path.write_text("Política de reembolso para clientes.", encoding="utf-8")
-            csv_path.write_text("produto;valor\ncamisa;50\n", encoding="utf-8")
+            csv_path.write_text("produto,valor\ncamisa,50\n", encoding="utf-8")
 
             documentos = app.carregar_documentos([txt_path, csv_path])
 

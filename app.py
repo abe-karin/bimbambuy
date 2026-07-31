@@ -2,8 +2,10 @@ import glob
 import importlib
 import logging
 import os
-from pathlib import Path
+import csv
 
+from langchain_core.documents import Document
+from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
@@ -22,7 +24,7 @@ Document = LangchainDocument
 # ==========================================
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 
-SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".csv", ".docx", ".doc"}
+
 recuperador_global = None
 agente_global = None
 
@@ -48,11 +50,7 @@ class RecuperadorLocal:
 
         pontuados.sort(key=lambda item: item[0], reverse=True)
         return [documento for _, documento in pontuados[:3]]
-
-        print("\n" + "="*50)
-        print("CONTEXTO ENTREGUE PARA A IA LER:")
-        print(contexto[:1500])
-        print("="*50 + "\n")
+        
         
 def _gerar_resposta_local(pergunta, contexto):
     contexto_limpo = " ".join(contexto.split())
@@ -98,6 +96,7 @@ def _gerar_resposta_local(pergunta, contexto):
     return f"Não encontrei uma resposta exata no contexto atual. Resumo do conteúdo disponível: {contexto_resumido}"
 
 
+SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".csv", ".docx"}
 def carregar_documentos(arquivos):
     documentos = []
 
@@ -127,7 +126,7 @@ def carregar_documentos(arquivos):
             # Junta todas as linhas soltas do PDF em um único texto contínuo
             texto_completo = "\n".join(pedaco.page_content for pedaco in pedacos_pdf if pedaco.page_content.strip())
             
-            # Salva como um documento único, igual fazemos com o TXT
+            # Salva como um documento único
             documentos.append(
                 Document(page_content=texto_completo, metadata={"source": str(caminho), "file_type": "pdf"})
             )
@@ -137,28 +136,38 @@ def carregar_documentos(arquivos):
                 Document(page_content=texto, metadata={"source": str(caminho), "file_type": "txt"})
             )
         elif extensao == ".csv":
-            texto = caminho.read_text(encoding="utf-8", errors="ignore")
-            documentos.append(
-                Document(page_content=texto, metadata={"source": str(caminho), "file_type": "csv"})
-            )
-        elif extensao in {".docx", ".doc"}:
-            try:
-                docx_module = importlib.import_module("docx")
-                DocxDocument = docx_module.Document
-            except ImportError:
-                documentos.append(
-                    Document(
-                        page_content=f"[Documento Word não processado automaticamente: {caminho.name}]",
-                        metadata={"source": str(caminho), "file_type": "docx"},
+            print(f"   Processando tabela CSV nativamente: {caminho}")
+            with open(caminho, mode='r', encoding='utf-8-sig') as arquivo_csv:
+                # O DictReader lê a primeira linha como cabeçalho automaticamente
+                leitor_csv = csv.DictReader(arquivo_csv)
+                
+                for linha in leitor_csv:
+                    # Constrói uma frase amigável para a IA com os dados da linha
+                    # Exemplo: "Região/Estado: São Paulo | Prazo: 2 a 5 dias | Valor: R$ 15,00"
+                    conteudo = " | ".join(f"{chave}: {valor}" for chave, valor in linha.items() if valor)
+                    documentos.append(
+                        Document(
+                            page_content=conteudo,
+                            metadata={"source": str(caminho), "file_type": "csv"}
+                        )
                     )
-                )
-                continue
+        elif extensao in {".docx"}:
+          
+            try:
+                from docx import Document as DocxDocument
+            except ImportError as exc:
+                raise ImportError("Para ler arquivos Word, instale python-docx no ambiente.") from exc
 
             doc = DocxDocument(str(caminho))
             texto = "\n".join(paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip())
+
+            print(f"SUCESSO! O arquivo {caminho.name} foi lido. Total de caracteres: {len(texto)}")
             documentos.append(
                 Document(page_content=texto, metadata={"source": str(caminho), "file_type": "docx"})
+
+            
             )
+            continue
 
     return documentos
 
@@ -170,8 +179,11 @@ def listar_arquivos_documentos(pasta="documentos"):
     arquivos = []
     for item in glob.glob(os.path.join(pasta, "*")):
         caminho = Path(item)
+        
+        # Só processa se for arquivo, tiver a extensão certa e NÃO começar com "~"
         if caminho.is_file() and caminho.suffix.lower() in SUPPORTED_EXTENSIONS:
-            arquivos.append(str(caminho))
+            if not caminho.name.startswith("~"):
+                arquivos.append(str(caminho))
 
     return sorted(arquivos)
 
@@ -202,7 +214,12 @@ def inicializar_base_conhecimento():
         embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
         banco_vetorial = Chroma.from_documents(documents=pedacos, embedding=embeddings)
 
-        return banco_vetorial.as_retriever(search_kwargs={"k": 20})
+        recuperador = banco_vetorial.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 6, "fetch_k": 20}
+    )
+
+        return recuperador
     except Exception as exc:
         print(f"  Usando recuperação local por fallback: {exc}")
         return RecuperadorLocal(documentos)
@@ -224,6 +241,7 @@ def configurar_agente(recuperador):
         "Se a resposta não estiver no contexto, diga amigavelmente que não encontrou "
         "essa informação nas políticas da loja e oriente a contatar o suporte.\n"
         "Responda de forma clara, educada e direta.\n\n"
+        "DICA: Quando o usuário perguntar sobre 'tratamento de dados', procure no contexto por informações sobre coleta, armazenamento, processamento e utilização de dados (LGPD).\n"
         "CONTEXTO RECUPERADO:\n{context}"
     )
 
