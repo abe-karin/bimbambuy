@@ -1,0 +1,71 @@
+POLÍTICAS GERAIS DA BIMBAM BUY 
+1. Política de Pagamentos e Segurança
+Para facilitar o atendimento, detalhamos abaixo as formas de pagamento (também reconhecidas como "métodos aceitos", "meios de pagamento", "opções de pagamento" ou "como pagar") disponíveis na BimBam Buy:
+
+Formas de Pagamentos / Métodos Aceitos:
+
+Cartões de Crédito e Débito: Aceitamos as principais bandeiras do mercado (Visa, Mastercard, American Express, Elo, etc.). As compras podem ser feitas à vista ou parceladas (as opções de parcelamento aparecem no checkout).
+
+Pagamentos Instantâneos (PIX): Para clientes no Brasil, aceitamos PIX. A aprovação da "forma de pagamento via PIX" é imediata através de QR Code ou função Copia e Cola.
+
+Boletos Bancários e Dinheiro: Aceitamos Boleto Bancário (Brasil) e vouchers de pagamento em dinheiro (variando conforme o país da LATAM). A compensação de boletos pode levar de 1 a 3 dias úteis.
+
+Carteiras Digitais (E-wallets): Suportamos pagamentos via PayPal, Mercado Pago, Apple Pay e Google Pay, dependendo da região do cliente.
+
+Confirmação de Pagamento: O pedido só avança para a etapa de logística e preparação após a confirmação financeira pelo nosso sistema.
+
+Segurança e Antifraude: Todas as transações passam por uma rigorosa revisão antifraude. Para a segurança do cliente, o sistema pode solicitar a verificação de titularidade ou documentos adicionais antes de aprovar a forma de pagamento escolhida.
+
+Estornos e Reembolsos financeiros: Em caso de cancelamento, os reembolsos são processados estritamente na mesma forma de pagamento original utilizada na compra (ex: estorno na fatura do cartão ou devolução na conta PIX). O prazo para o valor constar para o cliente é de 5 a 10 dias úteis após a aprovação da nossa equipe.
+
+2. Logística, Prazos e Custos de Envio
+
+Prazos de Preparação: A validação do pagamento leva até 1 dia útil. Após aprovado, levamos de 1 a 2 dias úteis para separação e embalagem do pedido.
+
+Estimativas de Entrega (após envio):
+
+Áreas Urbanas Principais: 2 a 5 dias úteis.
+
+Áreas Secundárias: 4 a 8 dias úteis.
+
+Áreas Estendidas / Remotas: 6 a 12 dias úteis.
+
+Custos de Frete: O valor do frete é calculado no carrinho de compras, baseado no CEP/destino, peso volumétrico dos produtos e modalidade de serviço escolhida.
+
+Frete Grátis: Pode ser disponibilizado em campanhas promocionais ou ao atingir um valor mínimo de compra (sujeito a restrições regionais ou categorias de produtos pesados).
+
+Erros na Entrega: Se a falha logística for da BimBam Buy, nós cobrimos os custos de reenvio. Se a falha for do cliente (ex: preenchimento de endereço incorreto ou ausência), uma nova taxa de frete poderá ser cobrada para o reenvio.
+
+3. Reembolsos e Devoluções de Produtos
+
+Arrependimento de Compra: O cliente tem o direito de solicitar a devolução em até 10 dias corridos após o recebimento físico do pedido. O produto deve estar intacto, completo e sem sinais de uso indevido.
+
+Produtos Incorretos ou Avarias Visíveis: Devem ser notificados ao atendimento em até 48 horas após a entrega. Exigimos o envio de evidências (fotos ou vídeos) do produto e da embalagem.
+
+Condições do Produto para Retorno: O item devolvido deve conter todos os acessórios, peças, manuais e, preferencialmente, ser alocado em sua embalagem original.
+
+Responsabilidade do Frete de Retorno: Em casos de erro da BimBam Buy (item errado) ou acionamento de garantia, nós assumimos o custo do frete de devolução. Em casos de arrependimento simples, o custo logístico do retorno pode ser repassado ao cliente, de acordo com a legislação do país.
+
+4. Garantia de Produtos
+
+Cobertura: A garantia cobre exclusivamente defeitos de fabricação, falhas de montagem de fábrica ou panes técnicas que ocorram sob condições normais de uso.
+
+Exclusões da Garantia: Não há cobertura para danos causados por mau uso, quedas, exposição à umidade/água, fogo, picos de energia, manipulação por assistências não autorizadas ou desgaste natural do tempo.
+
+Resolução da Garantia: Após diagnóstico técnico, o problema pode ser resolvido de três formas: (1) reparo da peça, (2) substituição por um item igual ou equivalente, ou (3) reembolso do valor pago.
+
+Danos em Trânsito (Transporte): Diferente da garantia de fábrica, se o produto chegar quebrado devido ao transporte, o cliente deve relatar em até 48 horas. Isso é tratado como "incidência logística" e não entra na fila de assistência técnica.
+
+5. Programa de Afiliados BimBam Buy
+
+Elegibilidade: Aberto a criadores de conteúdo, influenciadores, sites de cupons e administradores de comunidades digitais com foco de audiência na América Latina (LATAM).
+
+Atribuição de Vendas: As vendas são rastreadas automaticamente quando o cliente compra através de um "Link de Afiliado" ou insere um "Cupom de Desconto Exclusivo" no checkout, dentro da janela de conversão estipulada.
+
+Comissões: Os percentuais variam de acordo com o país e a categoria do produto vendido. O pagamento da comissão é liquidado somente após a confirmação do pagamento do cliente, entrega do produto e término do prazo legal de devolução (evitando fraudes).
+
+Regras e Proibições: O afiliado perderá a parceria se utilizar publicidade enganosa, tentar se passar por funcionário oficial da marca BimBam Buy ou utilizar fraudes nos links de rastreamento (cookie stuffing).
+
+Estornos de Comissão: Caso o cliente final cancele o pedido, fraude o cartão, ou devolva o produto, a comissão atrelada àquela venda será revertida/anulada no painel do afiliado.
+
+Nota Final: Este documento atua como um resumo das Políticas Gerais para atendimento rápido. Para cenários complexos ou específicos, consulte os manuais detalhados internos de cada setor (Garantia, Logística, Reembolsos, etc.).

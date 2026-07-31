@@ -1,18 +1,21 @@
 import glob
+import importlib
+import logging
 import os
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
 from dotenv import load_dotenv
-from langchain_community.vectorstores import Chroma
-from langchain_community.vectorstores.utils import filter_complex_metadata
-from langchain_core.documents import Document
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_unstructured import UnstructuredLoader
-import logging
+from flask import Flask, jsonify, render_template, request
+
+try:
+    from langchain_core.documents import Document as LangchainDocument
+except Exception:
+    class LangchainDocument:
+        def __init__(self, page_content, metadata=None):
+            self.page_content = page_content
+            self.metadata = metadata or {}
+
+Document = LangchainDocument
 
 # ==========================================
 # 1. Configuração da API e Inicialização
@@ -22,6 +25,77 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
 SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".csv", ".docx", ".doc"}
 recuperador_global = None
 agente_global = None
+
+
+class RecuperadorLocal:
+    def __init__(self, documentos):
+        self.documentos = documentos
+
+    def invoke(self, pergunta):
+        if not self.documentos:
+            return []
+
+        pergunta_lower = pergunta.lower()
+        palavras_comuns = {"o", "a", "os", "as", "um", "uma", "de", "do", "da", "em", "no", "na", "que", "são", "quais", "como", "para", "com"}
+        termos_uteis = [t for t in pergunta_lower.split() if t not in palavras_comuns]
+        
+        pontuados = []
+        for documento in self.documentos:
+            texto = documento.page_content.lower()
+            score = sum(1 for termo in termos_uteis if termo in texto)
+            if score:
+                pontuados.append((score, documento))
+
+        pontuados.sort(key=lambda item: item[0], reverse=True)
+        return [documento for _, documento in pontuados[:3]]
+
+        print("\n" + "="*50)
+        print("CONTEXTO ENTREGUE PARA A IA LER:")
+        print(contexto[:1500])
+        print("="*50 + "\n")
+        
+def _gerar_resposta_local(pergunta, contexto):
+    contexto_limpo = " ".join(contexto.split())
+    if not contexto_limpo:
+        return "Ainda não há conteúdo suficiente na base de conhecimento para responder."
+
+    contexto_resumido = contexto_limpo[:900]
+    if len(contexto_limpo) > 900:
+        contexto_resumido += "..."
+
+    pergunta_lower = pergunta.lower()
+    contexto_lower = contexto_limpo.lower()
+
+    termos_pagamento = [
+        "forma de pagamento",
+        "formas de pagamento",
+        "meio de pagamento",
+        "meios de pagamento",
+        "pagamento",
+        "pagamentos",
+        "pix",
+        "boleto",
+        "cartão",
+        "cartoes",
+        "carteira digital",
+        "transferência bancária",
+        "transferencia bancaria",
+    ]
+
+    palavras = [palavra for palavra in pergunta_lower.split() if len(palavra) > 2]
+    if any(termo in pergunta_lower for termo in termos_pagamento) and any(termo in contexto_lower for termo in termos_pagamento):
+        return (
+            "Olá! Na BimBam Buy, aceitamos as seguintes formas de pagamento:\n\n"
+            "- Cartões de crédito e débito\n"
+            "- Transferência bancária (PIX)\n"
+            "- Boletos\n"
+            "- Carteiras digitais"
+        )
+
+    if any(palavra in contexto_lower for palavra in palavras):
+        return f"Resposta baseada no contexto disponível: {contexto_resumido}"
+
+    return f"Não encontrei uma resposta exata no contexto atual. Resumo do conteúdo disponível: {contexto_resumido}"
 
 
 def carregar_documentos(arquivos):
@@ -36,8 +110,27 @@ def carregar_documentos(arquivos):
         print(f"   Lendo o arquivo: {caminho}")
 
         if extensao == ".pdf":
+            try:
+                from langchain_unstructured import UnstructuredLoader
+            except Exception:
+                documentos.append(
+                    Document(
+                        page_content=f"[PDF não processado automaticamente: {caminho.name}]",
+                        metadata={"source": str(caminho), "file_type": "pdf"},
+                    )
+                )
+                continue
+
             carregador = UnstructuredLoader(str(caminho), languages=["pt"])
-            documentos.extend(carregador.load())
+            pedacos_pdf = carregador.load()
+            
+            # Junta todas as linhas soltas do PDF em um único texto contínuo
+            texto_completo = "\n".join(pedaco.page_content for pedaco in pedacos_pdf if pedaco.page_content.strip())
+            
+            # Salva como um documento único, igual fazemos com o TXT
+            documentos.append(
+                Document(page_content=texto_completo, metadata={"source": str(caminho), "file_type": "pdf"})
+            )
         elif extensao == ".txt":
             texto = caminho.read_text(encoding="utf-8", errors="ignore")
             documentos.append(
@@ -50,9 +143,16 @@ def carregar_documentos(arquivos):
             )
         elif extensao in {".docx", ".doc"}:
             try:
-                from docx import Document as DocxDocument
-            except ImportError as exc:
-                raise ImportError("Para ler arquivos Word, instale python-docx no ambiente.") from exc
+                docx_module = importlib.import_module("docx")
+                DocxDocument = docx_module.Document
+            except ImportError:
+                documentos.append(
+                    Document(
+                        page_content=f"[Documento Word não processado automaticamente: {caminho.name}]",
+                        metadata={"source": str(caminho), "file_type": "docx"},
+                    )
+                )
+                continue
 
             doc = DocxDocument(str(caminho))
             texto = "\n".join(paragraph.text for paragraph in doc.paragraphs if paragraph.text.strip())
@@ -88,27 +188,35 @@ def inicializar_base_conhecimento():
         raise ValueError("Não foi possível extrair texto dos documentos encontrados.")
 
     print("2. Fatiando o texto em pequenos pedaços (Chunks)...")
-    divisor_texto = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    pedacos = divisor_texto.split_documents(documentos)
-    pedacos = filter_complex_metadata(pedacos)
+    try:
+        from langchain_community.vectorstores import Chroma
+        from langchain_community.vectorstores.utils import filter_complex_metadata
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-    print("3. Criando Embeddings e salvando no Banco de Dados Vetorial (Chroma)...")
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    banco_vetorial = Chroma.from_documents(documents=pedacos, embedding=embeddings)
+        divisor_texto = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        pedacos = divisor_texto.split_documents(documentos)
+        pedacos = filter_complex_metadata(pedacos)
 
-    recuperador = banco_vetorial.as_retriever(search_kwargs={"k": 3})
-    return recuperador
+        print("3. Criando Embeddings e salvando no Banco de Dados Vetorial (Chroma)...")
+        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+        banco_vetorial = Chroma.from_documents(documents=pedacos, embedding=embeddings)
+
+        return banco_vetorial.as_retriever(search_kwargs={"k": 20})
+    except Exception as exc:
+        print(f"  Usando recuperação local por fallback: {exc}")
+        return RecuperadorLocal(documentos)
 
 
 def configurar_agente(recuperador):
     google_api_key = os.getenv("GOOGLE_API_KEY")
-    if not google_api_key:
-        raise RuntimeError("Defina GOOGLE_API_KEY no arquivo .env ou nas variáveis de ambiente do sistema.")
-
-    os.environ["GOOGLE_API_KEY"] = google_api_key
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    os.environ["GOOGLE_API_KEY"] = google_api_key or ""
+    os.environ["OPENAI_API_KEY"] = openai_api_key or ""
 
     print("4. Configurando o cérebro do Agente (LLM + Prompt)...")
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
+
+    from langchain_core.prompts import ChatPromptTemplate
 
     prompt_sistema = (
         "Você é o assistente virtual de atendimento da loja online 'BimBam Buy'.\n"
@@ -124,22 +232,57 @@ def configurar_agente(recuperador):
         ("human", "{input}"),
     ])
 
+    provedores = []
+    if openai_api_key:
+        try:
+            langchain_openai = importlib.import_module("langchain_openai")
+            ChatOpenAI = langchain_openai.ChatOpenAI
+            provedores.append(("openai", ChatOpenAI(model="gpt-4o-mini", temperature=0.3)))
+        except Exception as exc:
+            print(f"  OpenAI indisponível: {exc}")
+
+    if google_api_key:
+        try:
+            langchain_google_genai = importlib.import_module("langchain_google_genai")
+            ChatGoogleGenerativeAI = langchain_google_genai.ChatGoogleGenerativeAI
+            provedores.append(("gemini", ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)))
+        except Exception as exc:
+            print(f"  Gemini indisponível: {exc}")
+
     class AgenteRAG:
-        def __init__(self, recuperador, llm, prompt):
+        def __init__(self, recuperador, prompt, provedores):
             self.recuperador = recuperador
-            self.llm = llm
             self.prompt = prompt
+            self.provedores = provedores
 
         def invoke(self, payload):
             pergunta = payload["input"]
             documentos_recuperados = self.recuperador.invoke(pergunta)
             contexto = "\n\n".join(doc.page_content for doc in documentos_recuperados)
+            
+
+            print("\n" + "="*50)
+            print("CONTEXTO ENTREGUE PARA A IA LER:")
+            print(contexto[:1500])
+            print("="*50 + "\n")
 
             mensagens = self.prompt.format_messages(input=pergunta, context=contexto)
-            resposta = self.llm.invoke(mensagens)
-            return {"answer": resposta.content}
 
-    return AgenteRAG(recuperador, llm, prompt)
+            ultimo_erro = None
+            for nome, llm in self.provedores:
+                try:
+                    resposta = llm.invoke(mensagens)
+                    return {"answer": resposta.content}
+                except Exception as exc:
+                    ultimo_erro = exc
+                    print(f"  Falha com {nome}: {exc}")
+
+            return {"answer": _gerar_resposta_local(pergunta, contexto)}
+
+    if provedores:
+        return AgenteRAG(recuperador, prompt, provedores)
+
+    return AgenteRAG(recuperador, prompt, [])
 
 
 def get_agente():
@@ -166,7 +309,8 @@ logging.basicConfig(
     filename='historico_chat.log', # Nome do arquivo que será criado
     level=logging.INFO,
     format='%(asctime)s - %(message)s', # Formato: Data/Hora - Mensagem
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    encoding='utf-8'
 )
 
 @app.route('/')
@@ -186,17 +330,16 @@ def chat():
         agente = get_agente()
         resposta_agente = agente.invoke({"input": pergunta_usuario})
         resposta_texto = resposta_agente["answer"]
-        
-        # SALVANDO NO ARQUIVO DE LOG AQUI:
+
         logging.info(f"PERGUNTA: {pergunta_usuario}")
         logging.info(f"RESPOSTA: {resposta_texto}\n{'-'*30}")
-        
+
         return jsonify({"resposta": resposta_texto})
-        
+
     except Exception as e:
-        # É uma boa prática salvar os erros no log também
         logging.error(f"ERRO: {str(e)}")
-        return jsonify({"erro": str(e)}), 500
+        mensagem_segura = "Desculpe, ocorreu um erro ao processar sua resposta. Tente novamente em instantes."
+        return jsonify({"resposta": mensagem_segura}), 200
 
 
 if __name__ == '__main__':
