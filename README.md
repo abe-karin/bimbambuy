@@ -1,18 +1,19 @@
 # BimBam Buy
 
-O BimBam Buy é um assistente virtual em Flask para responder perguntas com base em documentos da loja, usando uma abordagem RAG (Retrieval-Augmented Generation). A aplicação lê arquivos da pasta documentos, extrai texto e tenta responder com contexto relevante, usando modelos externos como Gemini ou OpenAI quando as chaves estão disponíveis, ou um fallback local quando não estão.
+O BimBam Buy é um assistente virtual em Flask para responder perguntas com base em documentos da loja. O projeto lê arquivos da pasta documentos, extrai texto e tenta responder com contexto relevante. Quando as variáveis de ambiente com chaves da OpenAI ou Gemini estão configuradas, a aplicação pode usar esses modelos; caso contrário, utiliza um fallback local simples.
 
-## O que a aplicação faz
+## O que o projeto faz
 
-- Lê arquivos em diferentes formatos:
+- Expõe uma interface web simples para conversação.
+- Recebe perguntas via endpoint HTTP e retorna respostas em JSON.
+- Lê documentos em diferentes formatos:
   - TXT
   - CSV
   - PDF
-  - DOCX 
-- Carrega esses arquivos para formar a base de conhecimento do projeto.
-- Recupera trechos relevantes para a pergunta do usuário.
-- Gera respostas com base no contexto recuperado.
-- Expõe uma interface web simples para interação.
+  - DOCX
+- Monta uma base de conhecimento a partir dos arquivos presentes na pasta documentos/.
+- Registra as interações em um arquivo chamado historico_chat.log.
+- Pode ser executado localmente, com Docker ou em uma instância OCI.
 
 ## Estrutura do projeto
 
@@ -24,16 +25,18 @@ bimbambuy/
 ├── templates/
 │   └── index.html
 ├── documentos/
+├── prints/
 ├── tests/
 ├── README.md
-└── .env
+└── .env (opcional)
 ```
 
 ## Requisitos
 
 - Python 3.9 ou superior
 - Ambiente virtual recomendado
-- Chave de API do Google Gemini ou OpenAI, opcionalmente
+- Docker (opcional, para execução em container)
+- Chaves de API da OpenAI ou Google Gemini (opcional)
 
 ## Configuração do ambiente
 
@@ -80,19 +83,21 @@ ou
 OPENAI_API_KEY=sua_chave_aqui
 ```
 
-> Se nenhuma chave estiver configurada, a aplicação usa um modo local de fallback para responder com base no contexto disponível.
+Se nenhuma chave for configurada, a aplicação continua funcionando com o modo local de fallback.
 
 ## Adicionar documentos à base de conhecimento
 
 Coloque os arquivos que devem servir como fonte de resposta na pasta documentos/.
 
-Exemplos aceitos:
-- arquivos .txt
-- arquivos .csv
-- arquivos .pdf
-- arquivos .docx 
+Formatos aceitos:
+- TXT
+- CSV
+- PDF
+- DOCX
 
-## Executar a aplicação localmente
+> Se a pasta documentos/ estiver vazia ou não houver arquivos suportados, a aplicação não conseguirá montar a base de conhecimento corretamente.
+
+## Executar localmente
 
 ```bash
 python app.py
@@ -103,6 +108,8 @@ A aplicação ficará disponível em:
 ```text
 http://127.0.0.1:5000/
 ```
+
+A interface web está na rota principal e o chat é processado pela rota /chat.
 
 ## Executar com Docker
 
@@ -120,17 +127,17 @@ docker run -p 5000:5000 --env-file .env bimbambuy
 
 ## Executando no OCI
 
-O projeto também funciona corretamente no Oracle Cloud Infrastructure (OCI). A aplicação pode ser implantada em uma instância Linux com Docker, exposta na porta 5000 e acessada via navegador.
+O projeto também funciona no Oracle Cloud Infrastructure (OCI). Ele pode ser implantado em uma instância Linux com Docker, exposto na porta 5000 e acessado via navegador.
 
-Exemplo de fluxo de execução no OCI:
+Fluxo de execução no OCI:
 
-- Criar ou selecionar uma instância compute no OCI.
+- Criar ou selecionar uma instância Compute no OCI.
 - Instalar Docker na máquina.
 - Fazer o build da imagem do projeto.
 - Publicar o container na porta 5000.
 - Acessar a interface pelo endereço público da instância.
 
-Abaixo estão exemplos visuais da interface e do ambiente de execução:
+Exemplos visuais da interface e do ambiente de execução:
 
 ![Tela da aplicação](prints/app.png)
 
@@ -150,12 +157,6 @@ python -m unittest discover -s tests -v
 
 ## Observações importantes
 
-- Se não houver documentos na pasta documentos/, a aplicação não conseguirá montar a base de conhecimento.
-- A aplicação pode registrar interações em um arquivo chamado historico_chat.log, dependendo da configuração do ambiente.
-
-## Próximos passos possíveis
-
-- Melhorar a recuperação semântica com reranking.
-- Adicionar filtros por metadados e data.
-- Implementar autenticação e painel administrativo.
-- Preparar a aplicação para deploy em ambiente de produção.
+- O projeto utiliza Flask e o arquivo principal de execução é app.py.
+- As respostas podem variar conforme os documentos presentes na pasta documentos/ e conforme o modo de resposta configurado.
+- O arquivo historico_chat.log é gerado automaticamente durante o uso da aplicação.
