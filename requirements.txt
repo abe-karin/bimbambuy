@@ -1,13 +1,20 @@
+# Essenciais
 flask
 python-dotenv
+python-docx
+
+# RAG e LangChain
 langchain-core
 langchain-community
-langchain-google-genai
 langchain-huggingface
-langchain-unstructured
 langchain-text-splitters
 langchain-openai
-unstructured[pdf]
+langchain-google-genai
+pypdf
+
+# Banco Vetorial e Modelos
 chromadb
 sentence-transformers
-python-docx
+
+# ML / Computação
+torch --index-url https://download.pytorch.org/whl/cpu

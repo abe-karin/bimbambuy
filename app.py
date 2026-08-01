@@ -110,21 +110,21 @@ def carregar_documentos(arquivos):
 
         if extensao == ".pdf":
             try:
-                from langchain_unstructured import UnstructuredLoader
-            except Exception:
+                from langchain_community.document_loaders import PyPDFLoader
+                print(f"   Processando PDF com PyPDFLoader: {caminho}")
+                
+                carregador = PyPDFLoader(str(caminho))
+                pedacos_pdf = carregador.load()
+                
+                # Junta o conteúdo das páginas
+                texto_completo = "\n".join(pedaco.page_content for pedaco in pedacos_pdf if pedaco.page_content.strip())
+                
                 documentos.append(
-                    Document(
-                        page_content=f"[PDF não processado automaticamente: {caminho.name}]",
-                        metadata={"source": str(caminho), "file_type": "pdf"},
-                    )
+                    Document(page_content=texto_completo, metadata={"source": str(caminho), "file_type": "pdf"})
                 )
+            except Exception as e:
+                print(f"   Erro ao processar PDF: {e}")
                 continue
-
-            carregador = UnstructuredLoader(str(caminho), languages=["pt"])
-            pedacos_pdf = carregador.load()
-            
-            # Junta todas as linhas soltas do PDF em um único texto contínuo
-            texto_completo = "\n".join(pedaco.page_content for pedaco in pedacos_pdf if pedaco.page_content.strip())
             
             # Salva como um documento único
             documentos.append(
@@ -199,31 +199,8 @@ def inicializar_base_conhecimento():
     if not documentos:
         raise ValueError("Não foi possível extrair texto dos documentos encontrados.")
 
-    print("2. Fatiando o texto em pequenos pedaços (Chunks)...")
-    try:
-        from langchain_community.vectorstores import Chroma
-        from langchain_community.vectorstores.utils import filter_complex_metadata
-        from langchain_huggingface import HuggingFaceEmbeddings
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-        divisor_texto = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        pedacos = divisor_texto.split_documents(documentos)
-        pedacos = filter_complex_metadata(pedacos)
-
-        print("3. Criando Embeddings e salvando no Banco de Dados Vetorial (Chroma)...")
-        embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
-        banco_vetorial = Chroma.from_documents(documents=pedacos, embedding=embeddings)
-
-        recuperador = banco_vetorial.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 6, "fetch_k": 20}
-    )
-
-        return recuperador
-    except Exception as exc:
-        print(f"  Usando recuperação local por fallback: {exc}")
-        return RecuperadorLocal(documentos)
-
+    print("Base carregada. Usando Recuperador Local (estável).")
+    return RecuperadorLocal(documentos)
 
 def configurar_agente(recuperador):
     google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -361,4 +338,4 @@ def chat():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)

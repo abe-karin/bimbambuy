@@ -4,20 +4,28 @@ FROM python:3.9-slim
 # Define o diretório de trabalho
 WORKDIR /app
 
-# 1. Atualiza e instala as bibliotecas de sistema necessárias (libheif e compiladores)
-# O --no-install-recommends ajuda a manter a imagem menor
+# 1. Instala dependências de sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libheif-dev \
     build-essential \
+    pkg-config \
+    libffi-dev \
+    poppler-utils \
+    tesseract-ocr \
+    tesseract-ocr-por \
     && rm -rf /var/lib/apt/lists/*
 
-# Copia o arquivo de dependências
+# 2. Instala o Torch separado (isso evita o erro de memória OOM)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+# 3. Copia o arquivo de requirements
 COPY requirements.txt .
 
-# Instala as dependências (agora que as bibliotecas de sistema existem, vai funcionar!)
+# 4. Instala TODO o restante de uma só vez
+# Como o torch já está instalado, o pip vai pular ele e instalar o resto rapidamente
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia todo o resto do código
+# 5. Copia o restante do código
 COPY . .
 
 # Define a porta
