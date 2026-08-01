@@ -118,6 +118,28 @@ Execute o container:
 docker run -p 5000:5000 --env-file .env bimbambuy
 ```
 
+## Executando no OCI
+
+O projeto também funciona corretamente no Oracle Cloud Infrastructure (OCI). A aplicação pode ser implantada em uma instância Linux com Docker, exposta na porta 5000 e acessada via navegador.
+
+Exemplo de fluxo de execução no OCI:
+
+- Criar ou selecionar uma instância compute no OCI.
+- Instalar Docker na máquina.
+- Fazer o build da imagem do projeto.
+- Publicar o container na porta 5000.
+- Acessar a interface pelo endereço público da instância.
+
+Abaixo estão exemplos visuais da interface e do ambiente de execução:
+
+![Tela da aplicação](prints/app.png)
+
+![Tela da aplicação](prints/app2.png)
+
+![Tela da aplicação](prints/app3.png)
+(Se a pergunta não estiver de acordo com a documentação fornecida, o bot não responderá.)
+![Ambiente OCI](prints/OCI.png)
+
 ## Testes
 
 Os testes automatizados podem ser executados com:
